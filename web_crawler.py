@@ -5,20 +5,6 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 
-url = 'https://movie.douban.com/chart'
-
-user_agents = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36'
-]
-headers = {
-    'User-Agent': random.choice(user_agents)
-}
-proxies = {
-    'http': 'http://47.121.183.107:8443'
-    # 'https': 'https://47.121.183.107:8443'
-}
-
 def crawl_new_movies(url, headers, proxies):
     # anti-anti-crawling setting
     response = requests.get(url, headers=headers, proxies=proxies)
@@ -95,6 +81,21 @@ def crawl_top250(url, headers, proxies):
     title = top250.get_text().replace('\n', '').replace(' ','').strip()
     df = pd.DataFrame([{'type':title, 'link': link}])
     return df
+
+url = 'https://movie.douban.com/chart'
+
+user_agents = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36'
+]
+headers = {
+    'User-Agent': random.choice(user_agents)
+}
+proxies = {
+    'http': 'http://47.121.183.107:8443'
+    # 'https': 'https://47.121.183.107:8443'
+}
+
 # new_movies_df = crawl_new_movies(url, headers, proxies)
 # print(new_movies_df)
 
@@ -107,6 +108,7 @@ def crawl_top250(url, headers, proxies):
 top250_df = crawl_top250(url, headers, proxies)
 print(top250_df)
 
+#############################################################
 # # selenium
 # # set Chrome options
 # chrome_options = webdriver.ChromeOptions()
