@@ -24,7 +24,7 @@ def crawl_new_movies(url, headers, proxies):
     response = requests.get(url, headers=headers, proxies=proxies)
     soup = BeautifulSoup(response.text, features = 'html.parser')
 
-    # get all new movies' information
+    # get all new movies' names & links
     movies = soup.find_all('div', class_ = 'pl2')
 
     movie_list = []
@@ -42,9 +42,32 @@ def crawl_new_movies(url, headers, proxies):
     df = pd.DataFrame(movie_list)
     return df
 
-new_movies_df = crawl_new_movies(url, headers, proxies)
-print(new_movies_df)
+def crawl_top_movies(url, headers, proxies):
+    # anti-anti-crawling setting
+    response = requests.get(url, headers=headers, proxies=proxies)
+    soup = BeautifulSoup(response.text, features = 'html.parser')
 
+    #get all top movies' names & links
+    movies = soup.find_all('li', class_='clearfix')
+    movie_list = []
+    for movie in movies:
+        element = movie.find('a')
+        name = element.get_text()
+        cleaned_name = name.replace('\n', '').replace(' ','')
+        link = element['href']
+        movie_item = {
+            'name': cleaned_name,
+            'link': link
+        }
+        movie_list.append(movie_item)
+    df = pd.DataFrame(movie_list)
+    return df
+
+# new_movies_df = crawl_new_movies(url, headers, proxies)
+# print(new_movies_df)
+
+top_movies_df = crawl_top_movies(url, headers, proxies)
+print(top_movies_df)
 
 # # selenium
 # # set Chrome options
