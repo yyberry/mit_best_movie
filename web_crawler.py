@@ -63,11 +63,49 @@ def crawl_top_movies(url, headers, proxies):
     df = pd.DataFrame(movie_list)
     return df
 
+def crawl_movie_types(url, headers, proxies):
+    # anti-anti-crawling setting
+    response = requests.get(url, headers=headers, proxies=proxies)
+    soup = BeautifulSoup(response.text, features = 'html.parser')
+
+    # get all movie types and revelent links
+    types = soup.find('div', class_='types').find_all('span')
+    type_list = []
+    for type in types:
+        element = type.find('a')
+        name = element.get_text()
+        link = element['href']
+        type_item = {
+            'type': name,
+            'link': link
+        }
+        type_list.append(type_item)
+    df = pd.DataFrame(type_list)
+    return df
+
+def crawl_top250(url, headers, proxies):
+    # anti-anti-crawling setting
+    response = requests.get(url, headers=headers, proxies=proxies)
+    soup = BeautifulSoup(response.text, features = 'html.parser')
+
+    # crawl top250 page link
+    top250 = soup.find('div', class_ = 'douban-top250-hd').find('h2')
+    link = top250.find('a')['href']
+    top250.find('span').decompose()
+    title = top250.get_text().replace('\n', '').replace(' ','').strip()
+    df = pd.DataFrame([{'type':title, 'link': link}])
+    return df
 # new_movies_df = crawl_new_movies(url, headers, proxies)
 # print(new_movies_df)
 
-top_movies_df = crawl_top_movies(url, headers, proxies)
-print(top_movies_df)
+# top_movies_df = crawl_top_movies(url, headers, proxies)
+# print(top_movies_df)
+
+# movie_types_df = crawl_movie_types(url, headers, proxies)
+# print(movie_types_df)
+
+top250_df = crawl_top250(url, headers, proxies)
+print(top250_df)
 
 # # selenium
 # # set Chrome options
