@@ -1,78 +1,59 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
+# from selenium import webdriver
+# from selenium.webdriver.common.by import By
 import random
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 
+def get_soup(url, headers, proxies):
+    """Fetch the content of the URL and return a BeautifulSoup object."""
+    response = requests.get(url, headers=headers, proxies=proxies)
+    return BeautifulSoup(response.text, features='html.parser')
+
+def extract_movies(movies):
+    """Extract movie names and links from a list of movie elements."""
+    return [
+        {
+            'name': movie.find('a').get_text(strip=True).replace('\n', '').replace(' ', ''),
+            'link': movie.find('a')['href']
+        }
+        for movie in movies if movie.find('a')
+    ]
+
 def crawl_new_movies(url, headers, proxies):
     # anti-anti-crawling setting
-    response = requests.get(url, headers=headers, proxies=proxies)
-    soup = BeautifulSoup(response.text, features = 'html.parser')
+    soup = get_soup(url, headers, proxies)
 
     # get all new movies' names & links
     movies = soup.find_all('div', class_ = 'pl2')
 
-    movie_list = []
-    for movie in movies:
-        element = movie.find('a')
-        name = element.get_text()
-        cleaned_name = name.replace('\n', '').replace(' ','').strip()
-        link = element['href']
-        movie_item = {
-            'name': cleaned_name,
-            'link': link
-        }
-        movie_list.append(movie_item)
-        
+    movie_list = extract_movies(movies)
     df = pd.DataFrame(movie_list)
     return df
 
 def crawl_top_movies(url, headers, proxies):
     # anti-anti-crawling setting
-    response = requests.get(url, headers=headers, proxies=proxies)
-    soup = BeautifulSoup(response.text, features = 'html.parser')
+    soup = get_soup(url, headers, proxies)
 
     #get all top movies' names & links
     movies = soup.find_all('li', class_='clearfix')
-    movie_list = []
-    for movie in movies:
-        element = movie.find('a')
-        name = element.get_text()
-        cleaned_name = name.replace('\n', '').replace(' ','')
-        link = element['href']
-        movie_item = {
-            'name': cleaned_name,
-            'link': link
-        }
-        movie_list.append(movie_item)
+    movie_list = extract_movies(movies)
     df = pd.DataFrame(movie_list)
     return df
 
 def crawl_movie_types(url, headers, proxies):
     # anti-anti-crawling setting
-    response = requests.get(url, headers=headers, proxies=proxies)
-    soup = BeautifulSoup(response.text, features = 'html.parser')
+    soup = get_soup(url, headers, proxies)
 
     # get all movie types and revelent links
     types = soup.find('div', class_='types').find_all('span')
-    type_list = []
-    for type in types:
-        element = type.find('a')
-        name = element.get_text()
-        link = element['href']
-        type_item = {
-            'type': name,
-            'link': link
-        }
-        type_list.append(type_item)
+    type_list = extract_movies(types)
     df = pd.DataFrame(type_list)
     return df
 
 def crawl_top250(url, headers, proxies):
     # anti-anti-crawling setting
-    response = requests.get(url, headers=headers, proxies=proxies)
-    soup = BeautifulSoup(response.text, features = 'html.parser')
+    soup = get_soup(url, headers, proxies)
 
     # crawl top250 page link
     top250 = soup.find('div', class_ = 'douban-top250-hd').find('h2')
@@ -102,11 +83,11 @@ proxies = {
 # top_movies_df = crawl_top_movies(url, headers, proxies)
 # print(top_movies_df)
 
-# movie_types_df = crawl_movie_types(url, headers, proxies)
-# print(movie_types_df)
+movie_types_df = crawl_movie_types(url, headers, proxies)
+print(movie_types_df)
 
-top250_df = crawl_top250(url, headers, proxies)
-print(top250_df)
+# top250_df = crawl_top250(url, headers, proxies)
+# print(top250_df)
 
 #############################################################
 # # selenium
