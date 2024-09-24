@@ -49,9 +49,6 @@ def scrap_movie_information(url, headers, proxies):
     df = pd.DataFrame.from_records([movie_info])  # Create DataFrame from single record
     print(df)
 
-
-
-
 # against anti-scraping setting
 user_agents = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
