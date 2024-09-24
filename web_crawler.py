@@ -156,6 +156,26 @@ def crawl_top250(url, headers, proxies):
     df = pd.DataFrame([{'type':title, 'link': link}])
     return df
 
+def crawl_top250_movies(url, headers, proxies):
+    #get all top movies' names & links
+    movie_list = []
+    for n in range(10):
+        start_num = n*25
+        page_url = f'?start={start_num}'
+        # anti-anti-crawling setting
+        soup = get_soup(url+page_url, headers, proxies)
+        
+        movies =  soup.find_all('div', class_='hd')
+        for movie in movies:
+            name_elements = movie.find_all('span', class_ = 'title')
+            name = ' '.join(element.text.strip() for element in name_elements)
+            link = movie.find('a')['href']
+            item = {'name': name,
+                    'link': link}
+            movie_list.append(item)
+    df = pd.DataFrame(movie_list)
+    return df
+
 user_agents = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36'
@@ -179,12 +199,16 @@ proxies = {
 # movie_types_df = crawl_movie_types(url, headers, proxies)
 # print(movie_types_df)
 
-url = 'https://movie.douban.com/typerank?type_name=%E5%89%A7%E6%83%85&type=11&interval_id=100:90&action='
-type_movies_df = crawl_type_movies(url, user_agents, proxies)
-print(type_movies_df)
+# url = 'https://movie.douban.com/typerank?type_name=%E5%89%A7%E6%83%85&type=11&interval_id=100:90&action='
+# type_movies_df = crawl_type_movies(url, user_agents, proxies)
+# print(type_movies_df)
 
 # top250_df = crawl_top250(url, headers, proxies)
 # print(top250_df)
+
+url = 'https://movie.douban.com/top250'
+top250_movies_df = crawl_top250_movies(url, headers, proxies)
+print(top250_movies_df)
 
 
 #############################################################
