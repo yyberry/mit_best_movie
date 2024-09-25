@@ -1,8 +1,6 @@
 import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException 
@@ -10,7 +8,10 @@ import random
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+import sqlite3
+
 import traceback
+import os
 
 def get_soup(url, headers, proxies):
     """Fetch the content of the URL and return a BeautifulSoup object."""
@@ -32,7 +33,7 @@ def extract_movies(movies, setting = 'soup'):
     if setting == 'soup':
         return [
             {
-                'name': movie.find('a').text(strip=True).replace('\n', '').replace(' ', ''),
+                'name': movie.find('a').text.strip().replace('\n', '').replace(' ', ''),
                 'link': movie.find('a')['href']
             }
             for movie in movies if movie.find('a')
@@ -63,37 +64,6 @@ def extract_movies(movies, setting = 'soup'):
         return df
 
 
-def crawl_new_movies(url, headers, proxies):
-    # anti-anti-crawling setting
-    soup = get_soup(url, headers, proxies)
-
-    # get all new movies' names & links
-    movies = soup.find_all('div', class_ = 'pl2')
-
-    movie_list = extract_movies(movies)
-    df = pd.DataFrame(movie_list)
-    return df
-
-def crawl_top_movies(url, headers, proxies):
-    # anti-anti-crawling setting
-    soup = get_soup(url, headers, proxies)
-
-    #get all top movies' names & links
-    movies = soup.find_all('li', class_='clearfix')
-    movie_list = extract_movies(movies)
-    df = pd.DataFrame(movie_list)
-    return df
-
-def crawl_movie_types(url, headers, proxies):
-    # anti-anti-crawling setting
-    soup = get_soup(url, headers, proxies)
-
-    # get all movie types and revelent links
-    types = soup.find('div', class_='types').find_all('span')
-    type_list = extract_movies(types)
-    df = pd.DataFrame(type_list)
-    return df
-
 def scroll_down(driver, pause_time, max_scroll_attempts):
     # Track the last scroll height to detect if scrolling reaches the bottom
     last_height = driver.execute_script("return document.body.scrollHeight")
@@ -119,6 +89,93 @@ def scroll_down(driver, pause_time, max_scroll_attempts):
         
         last_height = new_height
         scroll_attempts += 1
+    
+def show_all_db(db_name):
+    conn = sqlite3.connect(f'{db_name}.db')
+    c = conn.cursor()
+    c.execute(f"""
+        SELECT * FROM {db_name} 
+    """)
+    items = c.fetchall()
+    for item in items:
+        print(item)
+    conn.commit()
+    conn.close()
+
+def delete_db(db_name):
+    try:
+        os.remove(f'{db_name}.db')
+        print(f"Database '{db_name}.db'' deleted successfully.")
+    except FileNotFoundError:
+        print(f"Database '{db_name}.db'' not found.")
+    except Exception as e:
+        print(f"Error occurred while deleting database: {e}")
+
+def delete_table(db_name, table_name):
+    try:
+        conn = sqlite3.connect(f'{db_name}.db')
+        c = conn.cursor()
+        c.execute(f"DROP TABLE IF EXISTS {table_name};")
+        conn.commit()
+        print(f"Table '{table_name}' deleted successfully.")
+    except sqlite3.Error as e:
+        print(f"Error occurred while deleting table: {e}")
+    finally:
+        conn.close()
+
+def save_link_to_db(df, db_name, table_name, name_title):
+    # connect to database
+    conn = sqlite3.connect(f'{db_name}.db')
+    c = conn.cursor()
+    # create table
+    # need to write different SQL for different table structure
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS new_movies(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXTE,
+              link TEXT)
+    """)
+    # save data to db
+    for _, row in df.iterrows():
+        c.execute(f"INSERT INTO {table_name} ({name_title}, link) VALUES (?, ?)", (row['name'], row['link']))
+    conn.commit()
+    conn.close()
+
+def crawl_new_movies(url, headers, proxies):
+    # anti-anti-crawling setting
+    soup = get_soup(url, headers, proxies)
+
+    # get all new movies' names & links
+    movies = soup.find_all('div', class_ = 'pl2')
+
+    movie_list = extract_movies(movies)
+    df = pd.DataFrame(movie_list)
+    print(df)
+    save_link_to_db(df, db_name = 'link', table_name = 'hot_movies', name_title = 'movie_name')
+    # return df
+
+def crawl_top_movies(url, headers, proxies):
+    # anti-anti-crawling setting
+    soup = get_soup(url, headers, proxies)
+
+    #get all top movies' names & links
+    movies = soup.find_all('li', class_='clearfix')
+    movie_list = extract_movies(movies)
+    df = pd.DataFrame(movie_list)
+    print(df)
+    save_link_to_db(df, db_name = 'link', table_name = 'hot_movies', name_title = 'movie_name')
+    # return df
+
+def crawl_movie_types(url, headers, proxies):
+    # anti-anti-crawling setting
+    soup = get_soup(url, headers, proxies)
+
+    # get all movie types and revelent links
+    types = soup.find('div', class_='types').find_all('span')
+    type_list = extract_movies(types)
+    df = pd.DataFrame(type_list)
+    save_link_to_db(df, db_name = 'link', table_name = 'movie_types', name_title = 'type_name')
+    # return df
 
 def crawl_type_movies(url, user_agents, proxies):
     driver = set_chrome_options(user_agents, proxies, setting=False)
@@ -142,7 +199,9 @@ def crawl_type_movies(url, user_agents, proxies):
     # Extract movies
     movie_list = extract_movies(movies, setting='selenium')
     df = pd.DataFrame(movie_list)
-    return df
+    print(df)
+    save_link_to_db(df, db_name = 'link', table_name = 'type_movies', name_title = 'movie_name')
+    # return df
 
 def crawl_top250(url, headers, proxies):
     # anti-anti-crawling setting
@@ -154,7 +213,9 @@ def crawl_top250(url, headers, proxies):
     top250.find('span').decompose()
     title = top250.get_text().replace('\n', '').replace(' ','').strip()
     df = pd.DataFrame([{'type':title, 'link': link}])
-    return df
+    print(df)
+    save_link_to_db(df, db_name = 'link', table_name = 'top250', name_title = 'top250')
+    # return df
 
 def crawl_top250_movies(url, headers, proxies):
     #get all top movies' names & links
@@ -174,7 +235,9 @@ def crawl_top250_movies(url, headers, proxies):
                     'link': link}
             movie_list.append(item)
     df = pd.DataFrame(movie_list)
-    return df
+    print(df)
+    save_link_to_db(df, db_name = 'link', table_name = 'top250_movies', name_title = 'movie_name')
+    # return df
 
 user_agents = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
@@ -206,32 +269,7 @@ proxies = {
 # top250_df = crawl_top250(url, headers, proxies)
 # print(top250_df)
 
-url = 'https://movie.douban.com/top250'
-top250_movies_df = crawl_top250_movies(url, headers, proxies)
-print(top250_movies_df)
+# url = 'https://movie.douban.com/top250'
+# top250_movies_df = crawl_top250_movies(url, headers, proxies)
+# print(top250_movies_df)
 
-
-#############################################################
-# # selenium
-# # set Chrome options
-# chrome_options = webdriver.ChromeOptions()
-# chrome_options.add_argument(f'user-agent = {random.choice(user_agents)}')
-# chrome_options.add_argument(f'--proxy-server = {proxies}')
-# driver = webdriver.Chrome(options = chrome_options)
-
-# driver.get(url)
-
-# movies = driver.find_elements(By.CLASS_NAME, "pl2")
-# i = 1
-# for movie in movies:
-#     name  = movie.find_element(By.XPATH, f'//*[@id="content"]/div/div[1]/div/div/table[{i}]/tbody/tr/td[2]/div/a').text.strip()
-#     try:
-#         other_name = movie.find_element(By.XPATH, f'//*[@id="content"]/div/div[1]/div/div/table[{i}]/tbody/tr/td[2]/div/a/span').text.strip()
-#     except:
-#         other_name = ' '
-#     link = movie.find_element(By.XPATH, f'//*[@id="content"]/div/div[1]/div/div/table[{i}]/tbody/tr/td[2]/div/a').get_attribute('href')
-
-#     print(name,other_name,link)
-#     i += 1
-    
-# driver.quit()
